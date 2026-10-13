@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Visual Timer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Kid-Friendly Legibility -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        ready: {
+                            light: '#FEF3C7',
+                            DEFAULT: '#F59E0B',
+                            dark: '#B45309'
+                        },
+                        work: {
+                            light: '#E0F2FE',
+                            DEFAULT: '#0284C7',
+                            dark: '#0369A1'
+                        },
+                        cleanup: {
+                            light: '#F3E8FF',
+                            DEFAULT: '#9333EA',
+                            dark: '#6B21A8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .clock-shadow {
+            filter: drop-shadow(0px 12px 24px rgba(0, 0, 0, 0.15));
+        }
+
+        .pulse-soft {
+            animation: pulse-animation 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-animation {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        /* Custom range slider styling */
+        input[type=range] {
+            accent-color: #0284C7;
+        }
+        
+        .ready-slider { accent-color: #F59E0B !important; }
+        .work-slider { accent-color: #0284C7 !important; }
+        .cleanup-slider { accent-color: #9333EA !important; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-amber-400">
+
+    <!-- Top Classroom Header -->
+    <header class="bg-slate-800/90 border-b border-slate-700/80 px-4 py-3 md:px-8 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-500 text-slate-900 p-2.5 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg shadow-amber-500/20">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide text-white font-outfit">Classroom Timer</h1>
+                <p class="text-xs text-slate-400">Easy 3-step visual timer for TV display</p>
+            </div>
+        </div>
+
+        <!-- TV Controls / Mode Toggles -->
+        <div class="flex items-center space-x-2 md:space-x-4">
+            <!-- Mute / Sound Toggle Button -->
+            <button id="soundToggleBtn" onclick="toggleSound()" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 transition font-medium text-sm flex items-center space-x-2 border border-slate-600">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-amber-400"></i>
+                <span id="soundLabel" class="hidden sm:inline">Sound On</span>
+            </button>
+
+            <!-- Hide Setup Toggle for Big TV View -->
+            <button id="focusViewBtn" onclick="toggleFocusView()" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 transition font-medium text-sm flex items-center space-x-2 border border-slate-600">
+                <i class="fa-solid fa-expand text-blue-400"></i>
+                <span id="focusViewLabel" class="hidden sm:inline">Big Screen</span>
+            </button>
+
+            <!-- Fullscreen Toggle Button -->
+            <button onclick="toggleFullscreen()" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 transition font-medium text-sm flex items-center space-x-2 border border-slate-600" title="Toggle Fullscreen">
+                <i class="fa-solid fa-display text-emerald-400"></i>
+                <span class="hidden md:inline">TV Fullscreen</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+
+        <!-- Left Column: Big Visual Clock & Digital Status -->
+        <section id="clockContainer" class="lg:col-span-7 flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-2xl relative transition-all duration-300">
+            
+            <!-- Phase Badge Banner -->
+            <div id="phaseBadge" class="mb-3 px-6 py-2 rounded-full text-lg md:text-2xl font-bold uppercase tracking-wider flex items-center space-x-3 bg-amber-500 text-slate-950 shadow-lg transition-all duration-500">
+                <i id="phaseBadgeIcon" class="fa-solid fa-rocket text-xl"></i>
+                <span id="phaseBadgeText">GET READY</span>
+            </div>
+
+            <!-- Visual SVG 60-Minute Analog Clock -->
+            <div class="relative w-full max-w-[340px] sm:max-w-[420px] md:max-w-[460px] aspect-square flex items-center justify-center my-2">
+                <svg id="clockSvg" class="w-full h-full clock-shadow overflow-visible" viewBox="0 0 400 400">
+                    <!-- Clock Base Background Circle -->
+                    <circle cx="200" cy="200" r="175" fill="#1E293B" stroke="#334155" stroke-width="8" />
+                    <circle cx="200" cy="200" r="165" fill="#0F172A" />
+
+                    <!-- Dynamic Pie Arcs Container -->
+                    <g id="pieArcsGroup"></g>
+
+                    <!-- Clock Face Minute Ticks & 5-Min Markers -->
+                    <g id="clockFaceGroup"></g>
+
+                    <!-- Elapsed Time Sweeping Mask Overlay -->
+                    <path id="elapsedArc" fill="rgba(15, 23, 42, 0.75)" d="" />
+
+                    <!-- Outer Border Ring -->
+                    <circle cx="200" cy="200" r="165" fill="none" stroke="#475569" stroke-width="4" />
+
+                    <!-- Center Digital Display Container -->
+                    <circle cx="200" cy="200" r="68" fill="#0F172A" stroke="#334155" stroke-width="4" class="shadow-inner" />
+                    
+                    <!-- Digital Time Left -->
+                    <text x="200" y="192" text-anchor="middle" font-family="Outfit" font-weight="800" font-size="34" fill="#FFFFFF" id="digitalTimeText">00:00</text>
+                    <text x="200" y="218" text-anchor="middle" font-family="Fredoka" font-size="14" font-weight="500" fill="#94A3B8" id="subTimeLabel">TIME LEFT</text>
+
+                    <!-- Rotating Clock Hand -->
+                    <g id="clockHandGroup" transform="rotate(0 200 200)">
+                        <line x1="200" y1="200" x2="200" y2="45" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" />
+                        <polygon points="193,55 200,32 207,55" fill="#FFFFFF" />
+                        <circle cx="200" cy="200" r="12" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3" />
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Big Kid-Friendly Guidance Message -->
+            <div class="mt-2 text-center">
+                <p id="kidGuideText" class="text-xl md:text-2xl font-semibold text-amber-300 transition-colors duration-300">
+                    Prepare your materials and find a workspace
+                </p>
+                <div class="mt-2 flex items-center justify-center space-x-6 text-slate-400 text-sm font-medium">
+                    <span>Total Time: <strong id="totalTimeDisplay" class="text-slate-200">28 min</strong></span>
+                    <span>•</span>
+                    <span>Step <strong id="stepIndicator" class="text-slate-200">1 of 3</strong></span>
+                </div>
+            </div>
+
+            <!-- Big Presentation Play/Pause Control Overlay Bar for Quick Access -->
+            <div class="mt-4 flex items-center justify-center space-x-4 w-full">
+                <button id="mainPlayBtn" onclick="toggleTimer()" class="flex-1 max-w-[200px] py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition active:scale-95">
+                    <i id="mainPlayIcon" class="fa-solid fa-play"></i>
+                    <span id="mainPlayText">START</span>
+                </button>
+                
+                <button onclick="resetTimer()" class="py-3.5 px-5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-lg flex items-center justify-center space-x-2 transition active:scale-95" title="Reset Timer">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="hidden sm:inline">Reset</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Column: Teacher Phase Setup Panel -->
+        <section id="setupPanel" class="lg:col-span-5 bg-slate-800/80 border border-slate-700/80 rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+            <div>
+                <!-- Panel Header -->
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-700">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders text-sky-400 text-lg"></i>
+                        <h2 class="text-xl font-bold text-white font-outfit">Set Up 3 Timer Blocks</h2>
+                    </div>
+                    <span class="text-xs bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">5-Min Steps</span>
+                </div>
+
+                <!-- Step 1: GET READY -->
+                <div class="mb-5 p-4 rounded-2xl bg-slate-900/60 border-2 border-amber-500/30 hover:border-amber-500/60 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 text-xs font-bold flex items-center justify-center">1</span>
+                            <span class="font-bold text-amber-400 text-lg">Get Ready</span>
+                        </div>
+                        <span id="readyValText" class="text-xl font-extrabold text-white font-outfit">3 min</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-3">Prepare your materials and find a workspace</p>
+
+                    <!-- Slider & Quick +/- Buttons -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="adjustMinutes('ready', -1)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">-</button>
+                        <input type="range" id="readySlider" min="1" max="15" step="1" value="3" oninput="updateFromSliders()" class="w-full h-2 rounded-lg bg-slate-700 ready-slider cursor-pointer">
+                        <button onclick="adjustMinutes('ready', 1)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">+</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: DO -->
+                <div class="mb-5 p-4 rounded-2xl bg-slate-900/60 border-2 border-sky-500/30 hover:border-sky-500/60 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-full bg-sky-500 text-slate-950 text-xs font-bold flex items-center justify-center">2</span>
+                            <span class="font-bold text-sky-400 text-lg">Do</span>
+                        </div>
+                        <span id="workValText" class="text-xl font-extrabold text-white font-outfit">20 min</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-3">Work time</p>
+
+                    <!-- Slider & Quick +/- Buttons -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="adjustMinutes('work', -5)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">-</button>
+                        <input type="range" id="workSlider" min="5" max="50" step="5" value="20" oninput="updateFromSliders()" class="w-full h-2 rounded-lg bg-slate-700 work-slider cursor-pointer">
+                        <button onclick="adjustMinutes('work', 5)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">+</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: DONE -->
+                <div class="mb-5 p-4 rounded-2xl bg-slate-900/60 border-2 border-purple-500/30 hover:border-purple-500/60 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center">3</span>
+                            <span class="font-bold text-purple-400 text-lg">Done</span>
+                        </div>
+                        <span id="cleanupValText" class="text-xl font-extrabold text-white font-outfit">5 min</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-3">Follow cleanup routines</p>
+
+                    <!-- Slider & Quick +/- Buttons -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="adjustMinutes('cleanup', -1)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">-</button>
+                        <input type="range" id="cleanupSlider" min="1" max="15" step="1" value="5" oninput="updateFromSliders()" class="w-full h-2 rounded-lg bg-slate-700 cleanup-slider cursor-pointer">
+                        <button onclick="adjustMinutes('cleanup', 1)" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-lg font-bold border border-slate-700 flex items-center justify-center transition active:scale-95">+</button>
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="mt-4">
+                    <label class="text-xs text-slate-400 font-medium block mb-2">Quick Classroom Presets:</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="applyPreset(2, 10, 3)" class="py-2 px-2 bg-slate-700/70 hover:bg-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition text-center border border-slate-600">
+                            ⚡ Quick (15m)
+                        </button>
+                        <button onclick="applyPreset(3, 20, 5)" class="py-2 px-2 bg-slate-700/70 hover:bg-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition text-center border border-slate-600">
+                            📚 Reading (28m)
+                        </button>
+                        <button onclick="applyPreset(5, 35, 5)" class="py-2 px-2 bg-slate-700/70 hover:bg-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition text-center border border-slate-600">
+                            🧪 Project (45m)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Alert Sound Check Button -->
+            <div class="mt-6 pt-4 border-t border-slate-700/80 flex items-center justify-between text-xs text-slate-400">
+                <span>Sound Effect Test:</span>
+                <button onclick="playChimeSound('phase')" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium transition">
+                    <i class="fa-solid fa-bell text-amber-400 mr-1"></i> Test Bell
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Classroom Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 px-6 py-3 text-center text-xs text-slate-500">
+        Grade 3-5 Visual TV Timer • No sign-in required • Designed for clear classroom focus
+    </footer>
+
+    <!-- All Done Celebration Overlay Box (Hidden by Default) -->
+    <div id="celebrationModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-500">
+        <div class="bg-slate-800 border-2 border-emerald-500/50 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl transform scale-95 transition-transform duration-300" id="celebrationCard">
+            <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl pulse-soft">
+                <i class="fa-solid fa-star"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-white mb-2 font-outfit">ALL DONE!</h2>
+            <p class="text-lg text-emerald-300 font-medium mb-6">Great job working hard today, class!</p>
+            <button onclick="closeCelebration()" class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xl shadow-lg shadow-emerald-500/20 transition">
+                Start New Timer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- TIMER STATE MANAGEMENT ---
+        let readyMin = 3;
+        let workMin = 20;
+        let cleanupMin = 5;
+
+        let currentPhase = 1; // 1: Ready, 2: Work, 3: Cleanup, 4: Finished
+        let totalTimeSeconds = (readyMin + workMin + cleanupMin) * 60;
+        let elapsedSeconds = 0;
+        
+        let timerInterval = null;
+        let isRunning = false;
+        let soundEnabled = true;
+
+        // Visual Phase Configurations
+        const phases = {
+            1: {
+                name: 'GET READY',
+                icon: 'fa-rocket',
+                bgColor: '#F59E0B',
+                textColor: 'text-amber-300',
+                badgeBgClass: 'bg-amber-500 text-slate-950',
+                guideText: 'Prepare your materials and find a workspace'
+            },
+            2: {
+                name: 'DO',
+                icon: 'fa-brain',
+                bgColor: '#0284C7',
+                textColor: 'text-sky-300',
+                badgeBgClass: 'bg-sky-500 text-slate-950',
+                guideText: 'Work time'
+            },
+            3: {
+                name: 'DONE',
+                icon: 'fa-broom',
+                bgColor: '#9333EA',
+                textColor: 'text-purple-300',
+                badgeBgClass: 'bg-purple-600 text-white',
+                guideText: 'Follow cleanup routines'
+            },
+            4: {
+                name: 'ALL DONE!',
+                icon: 'fa-circle-check',
+                bgColor: '#10B981',
+                textColor: 'text-emerald-300',
+                badgeBgClass: 'bg-emerald-500 text-slate-950',
+                guideText: 'Time is up! Awesome effort today!'
+            }
+        };
+
+        // --- WEB AUDIO API FOR CLASSROOM CHIMES (No External Audio Files Needed) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playChimeSound(type = 'phase') {
+            if (!soundEnabled) return;
+            initAudio();
+
+            try {
+                const now = audioCtx.currentTime;
+
+                if (type === 'phase') {
+                    // Soft pleasant dual-tone chime for phase transitions
+                    const osc1 = audioCtx.createOscillator();
+                    const osc2 = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc1.type = 'sine';
+                    osc2.type = 'sine';
+
+                    osc1.frequency.setValueAtTime(523.25, now); // C5
+                    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.3); // E5
+
+                    osc2.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc2.frequency.exponentialRampToValueAtTime(783.99, now + 0.5); // G5
+
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+                    osc1.connect(gain);
+                    osc2.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc1.start(now);
+                    osc2.start(now);
+                    osc1.stop(now + 1.2);
+                    osc2.stop(now + 1.2);
+
+                } else if (type === 'finish') {
+                    // Cheerful celebratory 3-note arpeggio for completion
+                    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+
+                        gain.gain.setValueAtTime(0.3, now + idx * 0.15);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.8);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+
+                        osc.start(now + idx * 0.15);
+                        osc.stop(now + idx * 0.15 + 0.8);
+                    });
+                }
+            } catch (e) {
+                console.log('Audio playback error:', e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const label = document.getElementById('soundLabel');
+            const btn = document.getElementById('soundToggleBtn');
+
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-amber-400';
+                label.innerText = 'Sound On';
+                btn.classList.remove('bg-red-900/40', 'border-red-700');
+                playChimeSound('phase');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                label.innerText = 'Muted';
+                btn.classList.add('bg-red-900/40', 'border-red-700');
+            }
+        }
+
+        // --- SVG CLOCK DRAWING FUNCTIONS ---
+
+        // Draw 60-Minute Dial Ticks & 5-Minute Numbers (0, 5, 10 ... 55, 60)
+        function drawClockFace() {
+            const group = document.getElementById('clockFaceGroup');
+            group.innerHTML = '';
+
+            const cx = 200, cy = 200;
+            const rTicksInner = 152;
+            const rTicksOuter = 162;
+            const rText = 135;
+
+            // Loop 60 minutes
+            for (let i = 0; i < 60; i++) {
+                const angle = (i * 6 - 90) * (Math.PI / 180);
+                const isFiveMin = (i % 5 === 0);
+
+                const x1 = cx + (isFiveMin ? 146 : rTicksInner) * Math.cos(angle);
+                const y1 = cy + (isFiveMin ? 146 : rTicksInner) * Math.sin(angle);
+                const x2 = cx + rTicksOuter * Math.cos(angle);
+                const y2 = cy + rTicksOuter * Math.sin(angle);
+
+                // Tick Line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke', isFiveMin ? '#94A3B8' : '#475569');
+                line.setAttribute('stroke-width', isFiveMin ? '3' : '1.5');
+                group.appendChild(line);
+
+                // 5-minute increment labels
+                if (isFiveMin) {
+                    const tx = cx + rText * Math.cos(angle);
+                    const ty = cy + rText * Math.sin(angle) + 5; // Offset for vertical center alignment
+
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', tx);
+                    text.setAttribute('y', ty);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-family', 'Outfit');
+                    text.setAttribute('font-weight', '700');
+                    text.setAttribute('font-size', '15');
+                    text.setAttribute('fill', i === 0 ? '#F59E0B' : '#CBD5E1');
+                    text.textContent = i === 0 ? '60' : i;
+                    group.appendChild(text);
+                }
+            }
+        }
+
+        // Helper to generate SVG pie sector arc path
+        function describeArc(cx, cy, r, startAngleDeg, endAngleDeg) {
+            // Cap to avoid complete 360 circle SVG glitch
+            if (endAngleDeg - startAngleDeg >= 360) {
+                endAngleDeg = startAngleDeg + 359.999;
+            }
+
+            const startRad = (startAngleDeg - 90) * (Math.PI / 180);
+            const endRad = (endAngleDeg - 90) * (Math.PI / 180);
+
+            const x1 = cx + r * Math.cos(startRad);
+            const y1 = cy + r * Math.sin(startRad);
+            const x2 = cx + r * Math.cos(endRad);
+            const y2 = cy + r * Math.sin(endRad);
+
+            const largeArcFlag = (endAngleDeg - startAngleDeg <= 180) ? "0" : "1";
+
+            return [
+                "M", cx, cy,
+                "L", x1, y1,
+                "A", r, r, 0, largeArcFlag, 1, x2, y2,
+                "Z"
+            ].join(" ");
+        }
+
+        // Render Colored Wedges for the 3 Phases on the 60-min Clock Face
+        function renderClockSectors() {
+            const arcsGroup = document.getElementById('pieArcsGroup');
+            arcsGroup.innerHTML = '';
+
+            const totalMins = readyMin + workMin + cleanupMin;
+            if (totalMins <= 0) return;
+
+            const cx = 200, cy = 200, r = 162;
+
+            // Phase 1: Ready Arc (Amber)
+            const p1Start = 0;
+            const p1End = (readyMin / 60) * 360;
+            if (readyMin > 0) {
+                const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path1.setAttribute('d', describeArc(cx, cy, r, p1Start, p1End));
+                path1.setAttribute('fill', '#F59E0B');
+                path1.setAttribute('opacity', '0.85');
+                arcsGroup.appendChild(path1);
+            }
+
+            // Phase 2: Work Arc (Sky Blue)
+            const p2Start = p1End;
+            const p2End = p2Start + (workMin / 60) * 360;
+            if (workMin > 0) {
+                const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path2.setAttribute('d', describeArc(cx, cy, r, p2Start, p2End));
+                path2.setAttribute('fill', '#0284C7');
+                path2.setAttribute('opacity', '0.85');
+                arcsGroup.appendChild(path2);
+            }
+
+            // Phase 3: Cleanup Arc (Purple)
+            const p3Start = p2End;
+            const p3End = p3Start + (cleanupMin / 60) * 360;
+            if (cleanupMin > 0) {
+                const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path3.setAttribute('d', describeArc(cx, cy, r, p3Start, p3End));
+                path3.setAttribute('fill', '#9333EA');
+                path3.setAttribute('opacity', '0.85');
+                arcsGroup.appendChild(path3);
+            }
+        }
+
+        // Update Clock Hand Position and Sweeping Darkened Arc
+        function updateVisualProgress() {
+            totalTimeSeconds = (readyMin + workMin + cleanupMin) * 60;
+            
+            // Calculate total elapsed angle
+            const totalElapsedMinutes = elapsedSeconds / 60;
+            const sweepAngleDeg = (totalElapsedMinutes / 60) * 360;
+
+            // Update Hand Rotation Angle
+            const hand = document.getElementById('clockHandGroup');
+            hand.setAttribute('transform', `rotate(${sweepAngleDeg} 200 200)`);
+
+            // Update Darkened Overlay Arc for elapsed time
+            const elapsedPath = document.getElementById('elapsedArc');
+            if (sweepAngleDeg > 0.1) {
+                elapsedPath.setAttribute('d', describeArc(200, 200, 163, 0, Math.min(sweepAngleDeg, 359.99)));
+            } else {
+                elapsedPath.setAttribute('d', '');
+            }
+
+            // Determine Active Phase based on current elapsed seconds
+            const readySec = readyMin * 60;
+            const workSec = workMin * 60;
+            const cleanupSec = cleanupMin * 60;
+
+            let oldPhase = currentPhase;
+            let currentPhaseSecLeft = 0;
+
+            if (elapsedSeconds < readySec) {
+                currentPhase = 1;
+                currentPhaseSecLeft = readySec - elapsedSeconds;
+            } else if (elapsedSeconds < readySec + workSec) {
+                currentPhase = 2;
+                currentPhaseSecLeft = (readySec + workSec) - elapsedSeconds;
+            } else if (elapsedSeconds < totalTimeSeconds) {
+                currentPhase = 3;
+                currentPhaseSecLeft = totalTimeSeconds - elapsedSeconds;
+            } else {
+                currentPhase = 4; // Finished
+                currentPhaseSecLeft = 0;
+            }
+
+            // If Phase changed while running, trigger sound alert!
+            if (isRunning && oldPhase !== currentPhase && currentPhase <= 3) {
+                playChimeSound('phase');
+            }
+
+            // Update Digital Countdown Display (shows remaining time in current phase)
+            const mins = Math.floor(currentPhaseSecLeft / 60);
+            const secs = currentPhaseSecLeft % 60;
+            const formattedTime = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            document.getElementById('digitalTimeText').textContent = formattedTime;
+
+            // Update Phase UI Badge & Guidance Text
+            const info = phases[currentPhase];
+            const badge = document.getElementById('phaseBadge');
+            const badgeText = document.getElementById('phaseBadgeText');
+            const badgeIcon = document.getElementById('phaseBadgeIcon');
+            const guideText = document.getElementById('kidGuideText');
+            const stepIndicator = document.getElementById('stepIndicator');
+
+            badgeText.textContent = info.name;
+            badgeIcon.className = `fa-solid ${info.icon} text-xl`;
+            badge.className = `mb-3 px-6 py-2 rounded-full text-lg md:text-2xl font-bold uppercase tracking-wider flex items-center space-x-3 shadow-lg transition-all duration-500 ${info.badgeBgClass}`;
+            
+            guideText.textContent = info.guideText;
+            guideText.className = `text-xl md:text-2xl font-semibold transition-colors duration-300 ${info.textColor}`;
+
+            stepIndicator.textContent = currentPhase === 4 ? 'Complete!' : `${currentPhase} of 3`;
+
+            // Update Total Duration Display
+            const totalMins = readyMin + workMin + cleanupMin;
+            document.getElementById('totalTimeDisplay').textContent = `${totalMins} min`;
+        }
+
+        // --- TEACHER CONTROLS & SLIDER HANDLERS ---
+
+        function updateFromSliders() {
+            if (isRunning) return; // Prevent changing sliders during active run
+
+            readyMin = parseInt(document.getElementById('readySlider').value, 10);
+            workMin = parseInt(document.getElementById('workSlider').value, 10);
+            cleanupMin = parseInt(document.getElementById('cleanupSlider').value, 10);
+
+            // Cap total sequence to max 60 minutes for clean single-dial display
+            let total = readyMin + workMin + cleanupMin;
+            if (total > 60) {
+                // Auto adjust work time down if total exceeds 60 minutes
+                workMin = Math.max(5, 60 - readyMin - cleanupMin);
+                document.getElementById('workSlider').value = workMin;
+            }
+
+            // Update text displays
+            document.getElementById('readyValText').textContent = `${readyMin} min`;
+            document.getElementById('workValText').textContent = `${workMin} min`;
+            document.getElementById('cleanupValText').textContent = `${cleanupMin} min`;
+
+            renderClockSectors();
+            updateVisualProgress();
+        }
+
+        function adjustMinutes(phaseKey, delta) {
+            if (isRunning) return;
+
+            const slider = document.getElementById(`${phaseKey}Slider`);
+            let newVal = parseInt(slider.value, 10) + delta;
+            newVal = Math.max(parseInt(slider.min, 10), Math.min(parseInt(slider.max, 10), newVal));
+            slider.value = newVal;
+            
+            updateFromSliders();
+        }
+
+        function applyPreset(ready, work, cleanup) {
+            if (isRunning) resetTimer();
+
+            document.getElementById('readySlider').value = ready;
+            document.getElementById('workSlider').value = work;
+            document.getElementById('cleanupSlider').value = cleanup;
+
+            updateFromSliders();
+        }
+
+        // --- TIMER RUNTIME CONTROL LOOP ---
+
+        function toggleTimer() {
+            initAudio();
+
+            if (currentPhase === 4) {
+                resetTimer();
+            }
+
+            if (isRunning) {
+                // Pause Timer
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('mainPlayIcon').className = 'fa-solid fa-play';
+                document.getElementById('mainPlayText').textContent = 'RESUME';
+                document.getElementById('mainPlayBtn').className = 'flex-1 max-w-[200px] py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition active:scale-95';
+            } else {
+                // Start / Resume Timer
+                isRunning = true;
+                document.getElementById('mainPlayIcon').className = 'fa-solid fa-pause';
+                document.getElementById('mainPlayText').textContent = 'PAUSE';
+                document.getElementById('mainPlayBtn').className = 'flex-1 max-w-[200px] py-3.5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xl flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/20 transition active:scale-95';
+
+                timerInterval = setInterval(() => {
+                    elapsedSeconds++;
+                    updateVisualProgress();
+
+                    // Check if entire timer completed
+                    if (elapsedSeconds >= totalTimeSeconds) {
+                        finishTimer();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            elapsedSeconds = 0;
+            currentPhase = 1;
+
+            document.getElementById('mainPlayIcon').className = 'fa-solid fa-play';
+            document.getElementById('mainPlayText').textContent = 'START';
+            document.getElementById('mainPlayBtn').className = 'flex-1 max-w-[200px] py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition active:scale-95';
+
+            updateVisualProgress();
+        }
+
+        function finishTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            currentPhase = 4;
+
+            playChimeSound('finish');
+            updateVisualProgress();
+
+            // Show Celebration Modal
+            const modal = document.getElementById('celebrationModal');
+            const card = document.getElementById('celebrationCard');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 50);
+        }
+
+        function closeCelebration() {
+            const modal = document.getElementById('celebrationModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                resetTimer();
+            }, 300);
+        }
+
+        // --- TV PRESENTATION / FULLSCREEN UTILITIES ---
+
+        function toggleFocusView() {
+            const setupPanel = document.getElementById('setupPanel');
+            const clockContainer = document.getElementById('clockContainer');
+            const btnLabel = document.getElementById('focusViewLabel');
+
+            if (setupPanel.classList.contains('hidden')) {
+                // Show Setup Panel
+                setupPanel.classList.remove('hidden');
+                clockContainer.className = 'lg:col-span-7 flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-2xl relative transition-all duration-300';
+                btnLabel.innerText = 'Big Screen';
+            } else {
+                // Hide Setup Panel to maximize TV size
+                setupPanel.classList.add('hidden');
+                clockContainer.className = 'lg:col-span-12 flex flex-col items-center justify-center bg-slate-800/50 border border-slate-700/60 rounded-3xl p-6 md:p-10 shadow-2xl relative transition-all duration-300 max-w-3xl mx-auto';
+                btnLabel.innerText = 'Show Setup';
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // INITIALIZATION ON PAGE LOAD
+        window.onload = function() {
+            drawClockFace();
+            updateFromSliders();
+        };
+    </script>
+</body>
+</html>
